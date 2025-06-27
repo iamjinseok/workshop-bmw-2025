@@ -3,6 +3,7 @@ using wms_start.Components;
 using Azure;
 using Azure.AI.OpenAI;
 using System.ClientModel;
+using wms_finish.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
@@ -35,5 +36,11 @@ app.UseAntiforgery();
 app.UseStaticFiles();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// ป๙วร DB
+using (var context = new FactoryContext())
+{
+	context.initailize();
+}
 
 app.Run();

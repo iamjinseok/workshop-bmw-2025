@@ -16,6 +16,6 @@
 |----|-----------------------------|
 | 0  | GitHub codespace의 소개         |
 | 1  | [Semantic Kernel 소개](./docs/01-Basics.md)         |
-| 2  | [.NET AI Template 실습](./docs/02-DotNetAITemplate.md)        |
-| 3  | [내 DB 데이터로 답하게 해보자](./docs/03-DBIntegration.md)            |
+| 2  | [.NET AI Template 실습](./docs/02-AiTemplate.md)        |
+| 3  | [내 DB 데이터로 답하게 해보자](./docs/03-WMS.md)            |
 
