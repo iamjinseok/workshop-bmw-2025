@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace wms_finish.Sqlite;
+namespace wms_start.Sqlite;
 
 public static class FactoryExtension
 {
