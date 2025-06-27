@@ -45,6 +45,10 @@
         await chatInput!.FocusAsync();
 
         // Stream and display a new response from the IChatClient
+        var responseText = new Microsoft.Extensions.AI.TextContent("");
+        currentResponseMessage = new ChatMessage(ChatRole.Assistant, [responseText]);
+        currentResponseCancellation = new();
+
         // 여기에 넣어주세요.
 
         // Store the final response in the conversation, and begin getting suggestions

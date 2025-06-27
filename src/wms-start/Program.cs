@@ -3,7 +3,7 @@ using wms_start.Components;
 using Azure;
 using Azure.AI.OpenAI;
 using System.ClientModel;
-using wms_finish.Sqlite;
+using wms_start.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();

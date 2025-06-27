@@ -27,54 +27,109 @@
 
 	```
 
-	1. Page/Chat/Chatrazor의 SystemPrompt를 다음과 같이 바꾸어 주세요.
+	1. 혹시 using이 필요하다면 다음 코드를 참고하세요.
 	```cs
-    private const string SystemPrompt = @"
-        당신은 창고의 재고 수량을 관리하는 역할을 가지고 있습니다.
-        수량 확인이 안 되면 찾을 수 없다고 답변해주세요.
-        목록으로 답변할 경우 마크다운 표를 이용하고 품명, 창고, 수량으로 만드세요.
+	using Microsoft.SemanticKernel;
+	using Microsoft.SemanticKernel.ChatCompletion;
+	```
 
-        무엇을 물어보든 마이크, 30개, 서울창고라고 답하세요.
-        ";
+	1. Page/Chat/Chat.razor의 SystemPrompt를 다음과 같이 바꾸어 주세요.
+	```cs
+   private const string SystemPrompt = @"
+        당신은 창고의 재고 수량을 관리하는 역할을 가지고 있습니다.
+        수량 확인이 안 되면 찾을 수 없다고 답변해주세요.";
 	```
 
 	1. plugin 생성 
+		- 다음과 같이 재고 수량을 계산하는 플러그인 클래스를 만듭니다.
+		```cs
+		public class InventoryPlugin
+		{
+		    [KernelFunction("get_total_count")]
+		    [Description("전체 품목의 개수를 구하는 함수")]
+		    [return: Description("전체 품목의 총합계")]
+		    public int getTotalCount()
+		    {
+		        using (var db = new FactoryContext())
+		        {
+		            return db.Inventories.Sum(x => x.Quantity);
+		        }
+		    }
+
+		    [KernelFunction("get_count_by_item_name")]
+		    [Description("품목별 재고수량을 구하는 기능")]
+		    [return: Description("특정 품목의 재고수량 합계")]
+		    public int getCountByItem([Description("품목이름")] string itemname)
+		    {
+		        using (var db = new FactoryContext())
+		        {
+		            return db.Inventories.Where(x => x.ItemName == itemname).Sum(x => x.Quantity);
+		        }
+		    }
+
+		    [KernelFunction("get_item_list_of_warehouse")]
+		    [Description("창고에 있는 품목 정보를 조회")]
+		    [return: Description("품목 정보")]
+		    public List<Inventory> getItemListByWhsName([Description("창고이름")] string whsname)
+		    {
+		        using (var db = new FactoryContext())
+		        {
+		            return db.Inventories.Where(x => x.WhsName == whsname).ToList();
+		        }
+		    }
+		}
+		```
+
+		1. using이 필욯다면 아래 코드를 참고하세요.
+		```cs
+		using System.ComponentModel;
+
+		using wms_start.Sqlite;
+
+		using Microsoft.SemanticKernel;
+
+		namespace wms_start;
+		```
 
 	1. plugin 등록
-
-
-
-
-
-
-
-
-
-
-
-
-	1. Visual Studio Code의 경우 솔루션 파일이 있는 위치에서 다음 명령어를 실행해 주세요.
-	```bash
-	dotnet new aichatweb --name template-start --provider azureopenai --vector-store local --managed-identity false
-	```
-
-1. programs.cs 파일에 AzureOpenAI의 api key를 추가합니다. 17번째 행부터 다음과 같이 수정해 주세요.
-	```cs
-	var azureOpenAi = new AzureOpenAIClient(
-	new Uri("https://blazormeetup.openai.azure.com"),
-	new ApiKeyCredential("f09bbed482e84d30999f935effe34430"));
-	```
-
-1. 실행하여 확인해 봅니다.
-	1. Visual Studio Code의 경우
-		-프로젝트 디렉토리에서 다음 명령어 실행
-		```bash
-		dotnet run
+		- Programs.cs에서 kernel에 Plugin을 추가합니다.
+		```cs
+		kernel.ImportPluginFromType<InventoryPlugin>();
 		```
-	1. Visual Studio인 경우
-		- F5를 눌러서 평소와 같이 실행
+		- 각 페이지에서 사용할 수 있게 주입합니다.
+		```cs
+		builder.Services.AddSingleton<Kernel>(kernel);
+		```
 
-	1. '응급구조키트의 내용을 알려줘'와 같은 질문을 해보세요.
+		- 최종적인 코드는 다음과 같습니다.
+		```cs
+		#pragma warning disable SKEXP0001
+		var kernel = Kernel.CreateBuilder().
+		                    AddAzureOpenAIChatCompletion("gpt-4o-mini", "https://blazormeetup.openai.azure.com", "f09bbed482e84d30999f935effe34430")
+		                    .Build();
+		kernel.ImportPluginFromType<InventoryPlugin>();
 
+		var chatService = kernel.GetRequiredService<IChatCompletionService>();
+		IChatClient chatClient = chatService.AsChatClient();
+		#pragma warning restore SKEXP0001
+
+		builder.Services.AddChatClient(chatClient).UseFunctionInvocation().UseLogging();
+		builder.Services.AddSingleton<Kernel>(kernel);
+		```
+
+	1. AI에 질의하는 부분을 수정합니다. 주입받은 Kernel을 사용할 수 있게 선언합니다. Pages/Chat/Chat.razor 페이지를 수정해 주세요.
+		- @inject Kernel semanticKernel
+
+	1. Semantic Kernel로 질의하고 메시지 목록에 추가해 주세요.
+		```cs
+		PromptExecutionSettings settings = new()
+		{
+		    FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+		};
+		KernelArguments arguments = new(settings);
+
+		var response = await semanticKernel.InvokePromptAsync(userMessage.Text, arguments);
+		responseText.Text = response.ToString();
+		```
 ## 꼭 알고 넘어가야 할 것들
 - AI 웹앱을 만들기 위한 템플릿이 있습니다.
